@@ -179,5 +179,9 @@ npm test          # 31 tests, real git repos in a temp folder
 npm run typecheck
 ```
 
+Releases: bump `version` in package.json through a PR, then push a tag `vX.Y.Z` on that commit.
+The release workflow publishes to npm with provenance through npm Trusted Publishing, so no npm token
+is stored anywhere.
+
 MIT licensed. Built by [Resolve Studio](https://resolve.co.il), where a developer, clients and several agents
 work together every day. That is where this came from.
