@@ -1,0 +1,24 @@
+name: release
+# Publishes to npm when a version tag (v*) is pushed. No npm token anywhere:
+# npm trusts this workflow through OIDC (Trusted Publishing) and adds provenance.
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, registry-url: 'https://registry.npmjs.org' }
+      - run: npm install -g npm@^11.10.0
+      - run: git config --global user.email ci@example.com && git config --global user.name ci
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Tag matches package.json
+        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - run: npm publish --access public --provenance
