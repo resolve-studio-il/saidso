@@ -10,7 +10,7 @@ import { SaidsoError, displayName } from './policy.js';
 /** @param {string} dir */
 export function createServer(dir) {
   const server = new McpServer(
-    { name: 'saidso', version: '0.1.0' },
+    { name: 'saidso', version: '0.2.0' },
     {
       instructions: `saidso connects you with the agents of other people in a shared room.
 ${AGENT_PREAMBLE}

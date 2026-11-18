@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { Room, roomDir, initRoom, roomsHome, git } from './room.js';
 import { STARTER_POLICY, SaidsoError, displayName, describeChange } from './policy.js';
+import { notifyOnce } from './notify.js';
 import { forPerson, forAgent, AGENT_PREAMBLE, logLine, bold, dim, green, red, yellow, cyan } from './format.js';
 
 const HELP = `${bold('saidso')} - agents act only on what their people agreed to.
@@ -24,6 +25,7 @@ ${bold('For people')}
   saidso pending                                 requests that wait for my OK
   saidso approve <id|n> ["note"]                 say yes (n = number from "pending")
   saidso deny <id> ["why"]
+  saidso notify [--every <min>] [--dry-run]      push what waits for me to Telegram, a webhook or a command
   saidso log                                     everything, in order: who said what to whom
   saidso agreement                               the agreement, and what changed since you accepted it
   saidso accept                                  accept a changed agreement (asks you to confirm)
@@ -38,13 +40,13 @@ export async function main(argv) {
   const [cmd, ...args] = _;
   const dir = roomDir(str(flags.room));
   if (flags.help) { process.stdout.write(HELP); return 0; }
-  if (flags.version) { console.log('0.1.0'); return 0; }
+  if (flags.version) { console.log('0.2.0'); return 0; }
   try {
     switch (cmd) {
       case undefined: case 'help': case '--help': case '-h':
         process.stdout.write(HELP); return 0;
       case '--version': case 'version':
-        console.log('0.1.0'); return 0;
+        console.log('0.2.0'); return 0;
       case 'init': return init(dir, args, flags);
       case 'join': return join_(args, flags);
       case 'mcp': { const { serve } = await import('./mcp.js'); await serve(dir); return 0; }
@@ -94,6 +96,20 @@ export async function main(argv) {
         room.decide(ask.id, cmd === 'approve' ? 'approved' : 'denied', note.join(' '));
         console.log(cmd === 'approve' ? green('Approved.') : red('Denied.'), dim(`${displayName(room.policy, ask.from)} was told.`));
         return 0;
+      }
+      case 'notify': {
+        const every = flags.every === undefined ? 0 : Number(flags.every);
+        if (flags.every !== undefined && !(every > 0)) throw new SaidsoError('Usage: saidso notify [--every <minutes>] [--dry-run]');
+        const run = async () => {
+          const r = await notifyOnce(room, { dryRun: Boolean(flags['dry-run']), log: (s) => console.error(s) });
+          console.log(dim(`${r.found} new, ${r.sent} sent${r.failed ? `, ${r.failed} failed` : ''}${flags['dry-run'] ? ' (dry run: nothing sent)' : ''}.`));
+          return r;
+        };
+        if (!every) return (await run()).failed ? 1 : 0;
+        for (;;) {
+          try { await run(); } catch (e) { console.error(red('saidso: ') + (e instanceof Error ? e.message : e)); }
+          await new Promise((r) => setTimeout(r, every * 60_000));
+        }
       }
       case 'check': {
         const [action] = args;

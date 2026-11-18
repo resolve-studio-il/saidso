@@ -231,6 +231,43 @@ export class Room {
     return mine;
   }
 
+  /**
+   * Events worth a push to me. Judged from the current agreement and the real asks and decisions,
+   * never from notice files (any member can commit a file that claims to be from saidso) or from
+   * what a message says about itself. Keyed by event, so a forged notice changes nothing.
+   * @returns {{ key: string, kind: 'waiting' | 'stopped' | 'decided', ask: Message, decision?: Message, reason?: string }[]}
+   */
+  unnotified() {
+    this.pull();
+    this.#guard();
+    const me = this.me();
+    const sent = new Set(readJson(this.dir, 'notified.json'));
+    const all = this.all();
+    /** @type {{ key: string, kind: 'waiting' | 'stopped' | 'decided', ask: Message, decision?: Message, reason?: string }[]} */
+    const out = [];
+    for (const ask of all) {
+      if (ask.kind !== 'ask') continue;
+      const now = evaluate(this.policy, ask.from, ask.to, ask.action);
+      if (now.verdict === 'blocked') {
+        const known = !ask.action || this.policy.actions[ask.action];
+        if ((ask.from === me || ask.to === me) && !sent.has(`${ask.id}:stopped`)) {
+          out.push({ key: `${ask.id}:stopped`, kind: 'stopped', ask, reason: known ? now.reason : 'it is not in the agreement, so no one agreed to it' });
+        }
+      } else if (now.verdict === 'needs-ok') {
+        const okFrom = now.okFrom.filter((x) => x !== ask.from);
+        const d = all.find((x) => x.kind === 'decision' && x.re === ask.id && okFrom.includes(x.from));
+        if (!d && okFrom.includes(me) && !sent.has(`${ask.id}:waiting`)) out.push({ key: `${ask.id}:waiting`, kind: 'waiting', ask });
+        if (d && ask.from === me && !sent.has(`${ask.id}:decided`)) out.push({ key: `${ask.id}:decided`, kind: 'decided', ask, decision: d });
+      }
+    }
+    return out;
+  }
+
+  /** @param {string[]} keys */
+  markNotified(keys) {
+    writeLocal(this.dir, 'notified.json', JSON.stringify([...new Set([...readJson(this.dir, 'notified.json'), ...keys])]));
+  }
+
   /** Requests that wait for my OK. */
   pending() {
     this.pull();
@@ -343,10 +380,12 @@ function writeLocal(dir, name, text) {
   mkdirSync(join(dir, LOCAL), { recursive: true });
   writeFileSync(join(dir, LOCAL, name), text);
 }
-/** @param {string} dir @returns {string[]} */
-function readSeen(dir) {
-  try { return JSON.parse(readLocal(dir, 'seen.json') ?? '[]'); } catch { return []; }
+/** @param {string} dir @param {string} name @returns {string[]} */
+function readJson(dir, name) {
+  try { return JSON.parse(readLocal(dir, name) ?? '[]'); } catch { return []; }
 }
+/** @param {string} dir */
+function readSeen(dir) { return readJson(dir, 'seen.json'); }
 /** @param {string} dir @param {string[]} ids */
 function writeSeen(dir, ids) {
   writeLocal(dir, 'seen.json', JSON.stringify([...new Set(ids)]));
