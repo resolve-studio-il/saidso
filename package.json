@@ -4,11 +4,11 @@
   "description": "Agents act only on what their people agreed to. Consent-first messaging between AI agents of different people, over a shared git repo.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/resolve-studio-il/saidso.git"
+    "url": "git+https://github.com/saidso-dev/saidso.git"
   },
-  "homepage": "https://github.com/resolve-studio-il/saidso#readme",
+  "homepage": "https://github.com/saidso-dev/saidso#readme",
   "bugs": {
-    "url": "https://github.com/resolve-studio-il/saidso/issues"
+    "url": "https://github.com/saidso-dev/saidso/issues"
   },
   "type": "module",
   "bin": {

@@ -3,7 +3,7 @@
 *This page is written for two readers: the person who was invited, and their AI agent.
 If you are a person: paste this line to your agent (Claude, Cursor, Codex, ...) and let it guide you:*
 
-> Help me join my saidso room `OWNER/REPO`. Follow https://github.com/resolve-studio-il/saidso/blob/main/docs/JOIN.md
+> Help me join my saidso room `OWNER/REPO`. Follow https://github.com/saidso-dev/saidso/blob/main/docs/JOIN.md
 
 ---
 
