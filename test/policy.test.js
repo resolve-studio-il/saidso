@@ -55,3 +55,13 @@ test('a broken agreement explains every problem at once', () => {
     (/** @type {Error} */ e) => e instanceof SaidsoError && /lowercase/.test(e.message) && /"say"/.test(e.message) && /role "ghost"/.test(e.message),
   );
 });
+
+test('a change in meaning cannot hide in a moved line', async () => {
+  const { describeChange } = await import('../src/policy.js');
+  // Same lines, rearranged: "ok: client" moves from deploy-production to deploy-staging.
+  const before = 'room: r\nmembers:\n  d: { role: developer }\n  c: { role: client }\nactions:\n  deploy-staging:\n    say: test site\n    by: developer\n  deploy-production:\n    say: live site\n    by: developer\n    ok: client\n';
+  const after = 'room: r\nmembers:\n  d: { role: developer }\n  c: { role: client }\nactions:\n  deploy-staging:\n    say: test site\n    by: developer\n    ok: client\n  deploy-production:\n    say: live site\n    by: developer\n';
+  const lines = describeChange(before, after);
+  assert.ok(lines.some((l) => /deploy-production changed: .*needs OK from client -> .*no OK needed/.test(l)), lines.join('\n'));
+  assert.deepEqual(describeChange(before, before + '# a comment\n'), ['No change in meaning (only comments or formatting).']);
+});

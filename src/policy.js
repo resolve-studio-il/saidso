@@ -110,6 +110,35 @@ export function displayName(policy, id) {
   return policy.members[id]?.name ?? id;
 }
 
+/**
+ * What changed between two agreements, by meaning (not by lines), in plain words.
+ * Every member and every action is compared field by field, so nothing can hide in a moved line.
+ * @param {string} beforeText @param {string} afterText @returns {string[]}
+ */
+export function describeChange(beforeText, afterText) {
+  /** @type {Policy | undefined} */ let a;
+  /** @type {Policy} */ let b;
+  try { b = parsePolicy(afterText); } catch (e) { return [`The new agreement is not valid: ${(/** @type {Error} */ (e)).message}`]; }
+  try { a = parsePolicy(beforeText); } catch { a = undefined; }
+  if (!a) return ['There is no earlier agreement to compare with. Read the whole agreement below.'];
+  const out = [];
+  if (a.room !== b.room) out.push(`Room renamed: "${a.room}" -> "${b.room}"`);
+  for (const id of new Set([...Object.keys(a.members), ...Object.keys(b.members)])) {
+    const x = a.members[id], y = b.members[id];
+    if (!x && y) out.push(`New member: ${id} (${y.role})`);
+    else if (x && !y) out.push(`Member removed: ${id}`);
+    else if (x && y && JSON.stringify(x) !== JSON.stringify(y)) out.push(`Member ${id} changed: ${JSON.stringify(x)} -> ${JSON.stringify(y)}`);
+  }
+  const show = (/** @type {Action} */ x) => `"${x.say}", by ${x.by.join('/')}${x.to ? `, to ${x.to.join('/')}` : ''}${x.ok ? `, needs OK from ${x.ok}` : ', no OK needed'}`;
+  for (const id of new Set([...Object.keys(a.actions), ...Object.keys(b.actions)])) {
+    const x = a.actions[id], y = b.actions[id];
+    if (!x && y) out.push(`New action: ${id}: ${show(y)}`);
+    else if (x && !y) out.push(`Action removed: ${id}`);
+    else if (x && y && show(x) !== show(y)) out.push(`Action ${id} changed: ${show(x)} -> ${show(y)}`);
+  }
+  return out.length ? out : ['No change in meaning (only comments or formatting).'];
+}
+
 export class SaidsoError extends Error {}
 
 export const STARTER_POLICY = (/** @type {{room: string, me: string, role: string, name?: string}} */ o) => `# saidso.yml - the agreement for this room.

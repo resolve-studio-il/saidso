@@ -7,7 +7,7 @@ import { randomBytes } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import YAML from 'yaml';
-import { loadPolicy, evaluate, displayName, SaidsoError, POLICY_FILE } from './policy.js';
+import { loadPolicy, parsePolicy, evaluate, displayName, SaidsoError, POLICY_FILE } from './policy.js';
 import * as notice from './notice.js';
 
 /**
@@ -64,19 +64,25 @@ export class Room {
   agreementChange() {
     const current = readFileSync(join(this.dir, POLICY_FILE), 'utf8');
     const accepted = readLocal(this.dir, ACCEPTED);
-    return { changed: accepted !== undefined && accepted !== current, accepted, current };
+    return { changed: accepted !== current, first: accepted === undefined, accepted, current };
   }
 
-  acceptAgreement() {
-    writeLocal(this.dir, ACCEPTED, readFileSync(join(this.dir, POLICY_FILE), 'utf8'));
+  /**
+   * Record the agreement a person accepted. Pass the exact text they were shown: if the file changed
+   * in the meantime, nothing is accepted.
+   * @param {string} [shown]
+   */
+  acceptAgreement(shown) {
+    const current = readFileSync(join(this.dir, POLICY_FILE), 'utf8');
+    if (shown !== undefined && shown !== current) throw new SaidsoError('The agreement changed again while you were reading it. Nothing was accepted. Look again: saidso agreement');
+    parsePolicy(current); // never accept an agreement that does not parse
+    writeLocal(this.dir, ACCEPTED, current);
   }
 
   #guard() {
     const c = this.agreementChange();
-    if (c.accepted === undefined) { this.acceptAgreement(); return; }
-    if (c.changed) {
-      throw new SaidsoError('The agreement (saidso.yml) changed since your person last accepted it. Nothing is sent or done until they read the change and accept it, themselves: saidso agreement');
-    }
+    if (c.first) throw new SaidsoError('Your person has not accepted this room\'s agreement yet. They read it and accept it themselves: saidso agreement, then saidso accept');
+    if (c.changed) throw new SaidsoError('The agreement (saidso.yml) changed since your person last accepted it. Nothing is sent or done until they read the change and accept it, themselves: saidso agreement');
   }
 
   /** Bring in what others wrote. Safe to call often. */

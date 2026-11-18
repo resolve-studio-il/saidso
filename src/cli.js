@@ -3,7 +3,7 @@ import { join, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { Room, roomDir, initRoom, roomsHome, git } from './room.js';
-import { STARTER_POLICY, SaidsoError, displayName } from './policy.js';
+import { STARTER_POLICY, SaidsoError, displayName, describeChange } from './policy.js';
 import { forPerson, forAgent, AGENT_PREAMBLE, logLine, bold, dim, green, red, yellow, cyan } from './format.js';
 
 const HELP = `${bold('saidso')} - agents act only on what their people agreed to.
@@ -113,8 +113,7 @@ export async function main(argv) {
         room.pull();
         const c = room.agreementChange();
         if (!c.changed) { console.log(c.current); console.log(dim('This is the agreement your person accepted.')); return 0; }
-        console.log(yellow('The agreement changed since you last accepted it.') + dim(` Last change: ${lastChange(room.dir)}`) + '\n');
-        console.log(lineDiff(c.accepted ?? '', c.current));
+        showChange(room, c);
         console.log(`\nUntil you accept it, nothing is sent or done from here. To accept: ${bold('saidso accept')}`);
         return 0;
       }
@@ -123,12 +122,13 @@ export async function main(argv) {
         const c = room.agreementChange();
         if (!c.changed) { console.log(dim('Nothing to accept.')); return 0; }
         if (!process.stdin.isTTY || !process.stdout.isTTY) throw new SaidsoError('"accept" is for people, at a real terminal. Run "saidso agreement" to see the change first.');
-        console.log(lineDiff(c.accepted ?? '', c.current) + '\n');
+        showChange(room, c);
+        console.log('');
         const rl = createInterface({ input: process.stdin, output: process.stdout });
         const answer = (await rl.question('Type "yes" to accept the new agreement: ')).trim().toLowerCase();
         rl.close();
         if (answer !== 'yes') throw new SaidsoError('Not accepted. Nothing changed.');
-        room.acceptAgreement();
+        room.acceptAgreement(c.current); // exactly what was shown; refuses if the file changed meanwhile
         console.log(green('Accepted.'));
         return 0;
       }
@@ -224,14 +224,16 @@ async function confirmPerson(room, ask, cmd) {
   if (answer !== word) throw new SaidsoError('Not confirmed. Nothing changed.');
 }
 
-/** A small line diff, enough to read an agreement change. @param {string} a @param {string} b */
-function lineDiff(a, b) {
-  const A = a.split('\n'), B = b.split('\n');
-  const setA = new Set(A), setB = new Set(B);
-  const out = [];
-  for (const l of A) if (!setB.has(l) && l.trim()) out.push(red(`- ${l}`));
-  for (const l of B) if (!setA.has(l) && l.trim()) out.push(green(`+ ${l}`));
-  return out.join('\n') || dim('(only whitespace changed)');
+/** Show what changed, by meaning, then the whole new agreement. @param {Room} room @param {{ first: boolean, accepted?: string, current: string }} c */
+function showChange(room, c) {
+  if (c.first) console.log(yellow('You have not accepted this room\'s agreement yet.') + '\n');
+  else {
+    console.log(yellow('The agreement changed since you last accepted it.') + dim(` Last change: ${lastChange(room.dir)}`) + '\n');
+    for (const line of describeChange(c.accepted ?? '', c.current)) console.log(`  ${bold('*')} ${line}`);
+    console.log('');
+  }
+  console.log(dim('The whole agreement, as it is now:\n'));
+  console.log(c.current);
 }
 
 /** @param {string} dir */

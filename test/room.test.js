@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { twoPeople, gitLog } from './helpers.js';
@@ -161,4 +161,13 @@ test('a body cannot close the data wrapper and speak outside it', async () => {
   const text = forAgent(maya, m, maya.all());
   assert.equal(text.match(/<\/saidso-message>/g)?.length, 1);
   assert.equal(text.match(/<saidso-message/g)?.length, 1);
+});
+
+test('a copy that never accepted the agreement does not act, and accepting checks the shown text', () => {
+  const { maya } = twoPeople();
+  rmSync(join(maya.dir, '.saidso', 'accepted-agreement.yml'));
+  assert.throws(() => maya.inbox(), /has not accepted this room's agreement/);
+  assert.throws(() => maya.acceptAgreement('room: something else\n'), /changed again while you were reading/);
+  maya.acceptAgreement(readFileSync(join(maya.dir, 'saidso.yml'), 'utf8'));
+  assert.doesNotThrow(() => maya.inbox());
 });
