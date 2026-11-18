@@ -5,7 +5,7 @@
   "type": "module",
   "bin": { "saidso": "bin/saidso.js" },
   "exports": { ".": "./src/index.js" },
-  "files": ["bin", "src", "README.md", "LICENSE", "docs"],
+  "files": ["bin", "src", "README.md", "LICENSE", "docs/JOIN.md"],
   "engines": { "node": ">=20" },
   "scripts": {
     "test": "node --test --test-concurrency=1 test/*.test.js",
