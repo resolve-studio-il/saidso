@@ -232,9 +232,10 @@ export class Room {
   }
 
   /**
-   * Notices for me worth a push: something waits for my OK, my agent was stopped (or someone's agent was
-   * stopped with me), or my request was answered. Not marked seen; see markNotified. Each has `notifyKind`.
-   * @returns {(Message & { notifyKind: 'waiting' | 'stopped' | 'decided' })[]}
+   * Events worth a push to me. Judged from the current agreement and the real asks and decisions,
+   * never from notice files (any member can commit a file that claims to be from saidso) or from
+   * what a message says about itself. Keyed by event, so a forged notice changes nothing.
+   * @returns {{ key: string, kind: 'waiting' | 'stopped' | 'decided', ask: Message, decision?: Message, reason?: string }[]}
    */
   unnotified() {
     this.pull();
@@ -242,22 +243,29 @@ export class Room {
     const me = this.me();
     const sent = new Set(readJson(this.dir, 'notified.json'));
     const all = this.all();
-    /** @type {(Message & { notifyKind: 'waiting' | 'stopped' | 'decided' })[]} */
+    /** @type {{ key: string, kind: 'waiting' | 'stopped' | 'decided', ask: Message, decision?: Message, reason?: string }[]} */
     const out = [];
-    for (const m of all) {
-      if (m.kind !== 'notice' || m.from !== 'saidso' || m.to !== me || sent.has(m.id) || !m.re) continue;
-      const ask = all.find((x) => x.id === m.re);
-      if (!ask || ask.kind !== 'ask' || m.body.startsWith('Done:')) continue;
-      if (ask.verdict === 'blocked') out.push({ ...m, notifyKind: 'stopped' });
-      else if (ask.verdict === 'needs-ok' && m.to === ask.from) out.push({ ...m, notifyKind: 'decided' });
-      else if (ask.verdict === 'needs-ok' && this.status(ask, all) === 'waiting-for-ok') out.push({ ...m, notifyKind: 'waiting' });
+    for (const ask of all) {
+      if (ask.kind !== 'ask') continue;
+      const now = evaluate(this.policy, ask.from, ask.to, ask.action);
+      if (now.verdict === 'blocked') {
+        const known = !ask.action || this.policy.actions[ask.action];
+        if ((ask.from === me || ask.to === me) && !sent.has(`${ask.id}:stopped`)) {
+          out.push({ key: `${ask.id}:stopped`, kind: 'stopped', ask, reason: known ? now.reason : 'it is not in the agreement, so no one agreed to it' });
+        }
+      } else if (now.verdict === 'needs-ok') {
+        const okFrom = now.okFrom.filter((x) => x !== ask.from);
+        const d = all.find((x) => x.kind === 'decision' && x.re === ask.id && okFrom.includes(x.from));
+        if (!d && okFrom.includes(me) && !sent.has(`${ask.id}:waiting`)) out.push({ key: `${ask.id}:waiting`, kind: 'waiting', ask });
+        if (d && ask.from === me && !sent.has(`${ask.id}:decided`)) out.push({ key: `${ask.id}:decided`, kind: 'decided', ask, decision: d });
+      }
     }
     return out;
   }
 
-  /** @param {string[]} ids */
-  markNotified(ids) {
-    writeLocal(this.dir, 'notified.json', JSON.stringify([...new Set([...readJson(this.dir, 'notified.json'), ...ids])]));
+  /** @param {string[]} keys */
+  markNotified(keys) {
+    writeLocal(this.dir, 'notified.json', JSON.stringify([...new Set([...readJson(this.dir, 'notified.json'), ...keys])]));
   }
 
   /** Requests that wait for my OK. */

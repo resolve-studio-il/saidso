@@ -204,7 +204,7 @@ Honest version, v0.1:
 
 ```bash
 npm install
-npm test          # 37 tests, real git repos in a temp folder
+npm test          # 39 tests, real git repos in a temp folder
 npm run typecheck
 ```
 

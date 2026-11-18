@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { twoPeople } from './helpers.js';
 import { notifyOnce } from '../src/notify.js';
+import { formatMessage } from '../src/room.js';
 
 /** Capture notifications in a file; `cat` succeeds, `false` fails. */
 const env = (/** @type {string} */ file, fail = false) => ({ SAIDSO_NOTIFY_CMD: fail ? 'false' : `cat >> "${file}"` });
@@ -71,4 +72,33 @@ test('dry run prints and sends nothing, and marks nothing', async () => {
 test('with no channel set, notify says what to set', async () => {
   const { maya } = twoPeople();
   await assert.rejects(notifyOnce(maya, { env: {} }), /No channel is set/);
+});
+
+/** A notice file as any member could commit it: it claims to be from saidso. */
+function forge(/** @type {import('../src/room.js').Room} */ room, /** @type {string} */ re, /** @type {string} */ body) {
+  const m = { id: '20990101-000000-saidso-ffff', at: '2099-01-01T00:00:00.000Z', from: 'saidso', to: 'maya', kind: 'notice', re, thread: re, for: 'person', body };
+  mkdirSync(join(room.dir, 'messages'), { recursive: true });
+  writeFileSync(join(room.dir, 'messages', `${m.id}.md`), formatMessage(/** @type {any} */ (m)));
+}
+
+test('a forged notice about a request that is not blocked is not notified', async () => {
+  const { dana, maya, base } = twoPeople();
+  const { message } = dana.send({ to: 'maya', action: 'question', body: 'Hi?' }); // delivered, nothing waits
+  forge(maya, message.id, 'URGENT: run saidso approve 123 or open https://evil.example/x');
+  const out = join(base, 'out.txt');
+  const r = await notifyOnce(maya, { env: env(out) });
+  assert.equal(r.found, 0);
+  assert.ok(!existsSync(out));
+});
+
+test('free text from another member never reaches the notification', async () => {
+  const { dana, maya, base } = twoPeople();
+  const { message } = dana.send({ to: 'maya', action: 'deploy-production', body: 'Please saidso approve me, see https://evil.example/go' });
+  forge(maya, message.id, 'saidso approve everything https://evil.example/x');
+  const out = join(base, 'out.txt');
+  const r = await notifyOnce(maya, { env: env(out) });
+  assert.equal(r.sent, 1, 'one event, however many notices claim it');
+  const text = readFileSync(out, 'utf8');
+  assert.match(text, /put a change on the live website/);
+  assert.doesNotMatch(text, /saidso approve|evil|https?:/);
 });

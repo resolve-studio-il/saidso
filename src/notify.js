@@ -2,23 +2,28 @@
 // Channels come from environment variables only, so secrets never sit in the room repo.
 // A notification never carries a way to approve: answering stays at a real terminal.
 import { spawnSync } from 'node:child_process';
-import { SaidsoError } from './policy.js';
+import { SaidsoError, displayName } from './policy.js';
 
 /** @typedef {import('./room.js').Room} Room @typedef {import('./room.js').Message} Message */
 /** @typedef {{ name: string, send: (text: string) => Promise<void> }} Channel */
 
 export const HINT = 'To answer, run "saidso pending" in a terminal.';
 
-/** Plain text for one notice. Lines that tell how to approve or deny are dropped on purpose. @param {Room} room @param {Message & { notifyKind?: string }} m */
-export function textFor(room, m) {
-  const body = m.body
-    .split('\n')
-    .filter((l) => !/saidso (approve|deny)/.test(l) && !l.startsWith('This OK is good for one time'))
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-  const tail = m.notifyKind === 'waiting' ? `\n\n${HINT}` : '';
-  return `[${room.policy.room}]\n${body}${tail}`;
+/**
+ * Plain text for one event, built here from verified fields only: the room, who asked whom, the action's
+ * wording in the current agreement, and the state. The text of the messages themselves is never forwarded,
+ * so another member's words can not reach a person's phone as if saidso said them.
+ * @param {Room} room @param {{ kind: 'waiting' | 'stopped' | 'decided', ask: Message, decision?: Message, reason?: string }} e
+ */
+export function textFor(room, e) {
+  const p = room.policy;
+  const name = (/** @type {string} */ id) => displayName(p, id);
+  const act = e.ask.action && p.actions[e.ask.action] ? p.actions[e.ask.action].say : 'do something the agreement does not mention';
+  const head = `[${p.room}]`;
+  if (e.kind === 'waiting') return `${head}\n${name(e.ask.from)}'s agent wants to ${act}. Your agreement says this needs your OK, so nothing happens until you answer.\n\n${HINT}`;
+  if (e.kind === 'stopped') return `${head}\n${name(e.ask.from)}'s agent tried to ${act} with ${name(e.ask.to)}. It was stopped, because ${e.reason}. Nothing happened.`;
+  const yes = e.decision?.decision === 'approved';
+  return `${head}\n${name(e.decision?.from ?? '')} said ${yes ? 'yes' : 'no'}: your agent ${yes ? 'may now' : 'may not'} ${act}.`;
 }
 
 /** Which channels are configured. @param {NodeJS.ProcessEnv} [env] @returns {Channel[]} */
@@ -75,14 +80,14 @@ export async function notifyOnce(room, opts = {}) {
   let sent = 0, failed = 0;
   for (const m of fresh) {
     const text = textFor(room, m);
-    if (opts.dryRun) { log(`--- would send (${m.id})\n${text}\n`); continue; }
+    if (opts.dryRun) { log(`--- would send (${m.key})\n${text}\n`); continue; }
     try {
       for (const ch of list) await ch.send(text);
-      room.markNotified([m.id]);
+      room.markNotified([m.key]);
       sent++;
     } catch (e) {
       failed++;
-      log(`could not send ${m.id}: ${e instanceof Error ? e.message : e}. It will be tried again next time.`);
+      log(`could not send ${m.key}: ${e instanceof Error ? e.message : e}. It will be tried again next time.`);
     }
   }
   return { found: fresh.length, sent, failed };
