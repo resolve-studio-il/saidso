@@ -182,7 +182,7 @@ function init(dir, args, flags) {
 Next:
   1. Add the other people and what each side may do in ${bold('saidso.yml')}.
   2. Push this folder to a private GitHub repo and invite them.
-  3. Send them one line: ${cyan(`"Help me join my saidso room: npx saidso join <owner/repo>"`)}
+  3. Send them one line: ${cyan(`"Help me join my saidso room: npx saidso-cli join <owner/repo>"`)}
      Their agent does the rest (see docs/JOIN.md).`);
   return 0;
 }
@@ -219,8 +219,8 @@ Then run this command again.`);
   if (!me) console.log(`Tell saidso who you are: saidso whoami --room "${dir}" --set <member>   (members: ${Object.keys(room.policy.members).join(', ')})`);
   console.log(`
 Connect your agent:
-  Claude Code:  claude mcp add saidso -e SAIDSO_ROOM="${dir}" -- npx -y saidso mcp
-  Other agents: any MCP client can run "npx -y saidso mcp" with SAIDSO_ROOM="${dir}"
+  Claude Code:  claude mcp add saidso -e SAIDSO_ROOM="${dir}" -- npx -y saidso-cli mcp
+  Other agents: any MCP client can run "npx -y saidso-cli mcp" with SAIDSO_ROOM="${dir}"
 Read the agreement first: ${join(dir, 'saidso.yml')}`);
   return 0;
 }
