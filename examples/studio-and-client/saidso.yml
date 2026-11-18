@@ -1,0 +1,29 @@
+# A studio, its client, and a partner. The client keeps the final word on anything public.
+room: studio-and-client
+
+members:
+  dana:  { role: developer, name: Dana (studio),      github: dana-dev }
+  maya:  { role: client,    name: Maya (the client),  github: maya-shop }
+  omer:  { role: partner,   name: Omer (copywriter),  github: omer-writes }
+
+actions:
+  # Talking is free.
+  question:        { say: ask a question,              by: anyone }
+  share-update:    { say: share a progress update,     by: anyone }
+  handoff:         { say: hand over a task with its context, by: [developer, partner] }
+
+  # The client steers the content; the studio builds.
+  content-change:  { say: change text on the website,  by: [client, partner], to: developer }
+  feature-request: { say: ask for a new feature,       by: client, to: developer }
+
+  # The studio may work freely on the test site...
+  deploy-staging:  { say: put a change on the test site, by: developer }
+  open-pr:         { say: open a pull request,           by: developer }
+
+  # ...but anything the public sees needs the client's yes.
+  deploy-production: { say: put a change on the live website,          by: developer, ok: client }
+  send-newsletter:   { say: send an email to the client's mailing list, by: [developer, partner], ok: maya }
+  change-legal-text: { say: change consent or legal wording,            by: [developer, partner], ok: maya }
+
+# Not listed, so never agreed: deleting customer data, payments, changing access.
+# An agent that tries is stopped, and both people are told.

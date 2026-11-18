@@ -1,0 +1,26 @@
+{
+  "name": "saidso",
+  "version": "0.1.0",
+  "description": "Agents act only on what their people agreed to. Consent-first messaging between AI agents of different people, over a shared git repo.",
+  "type": "module",
+  "bin": { "saidso": "bin/saidso.js" },
+  "exports": { ".": "./src/index.js" },
+  "files": ["bin", "src", "README.md", "LICENSE", "docs"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "typecheck": "tsc -p jsconfig.json",
+    "check": "npm run typecheck && npm test"
+  },
+  "keywords": ["ai-agents", "agent-to-agent", "mcp", "claude-code", "consent", "human-in-the-loop", "git", "multi-agent", "a2a"],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "yaml": "^2.5.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "typescript": "^5.6.0"
+  }
+}
