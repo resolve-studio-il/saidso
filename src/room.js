@@ -25,6 +25,8 @@ import * as notice from './notice.js';
 
 const MESSAGES = 'messages';
 const LOCAL = '.saidso';
+const ACCEPTED = 'accepted-agreement.yml';
+const KINDS = new Set(['info', 'ask', 'notice', 'decision']);
 
 /** Find the room: --room, then SAIDSO_ROOM, then the current folder. @param {string} [explicit] */
 export function roomDir(explicit) {
@@ -52,6 +54,29 @@ export class Room {
   setMe(id) {
     if (!this.policy.members[id]) throw new SaidsoError(`"${id}" is not a member in ${POLICY_FILE}. Members: ${Object.keys(this.policy.members).join(', ')}`);
     writeLocal(this.dir, 'me', id + '\n');
+    if (readLocal(this.dir, ACCEPTED) === undefined) this.acceptAgreement();
+  }
+
+  /**
+   * The agreement is only valid as this person accepted it. If someone changes saidso.yml,
+   * this copy of the room stops sending and acting until a person here reads the change and accepts it.
+   */
+  agreementChange() {
+    const current = readFileSync(join(this.dir, POLICY_FILE), 'utf8');
+    const accepted = readLocal(this.dir, ACCEPTED);
+    return { changed: accepted !== undefined && accepted !== current, accepted, current };
+  }
+
+  acceptAgreement() {
+    writeLocal(this.dir, ACCEPTED, readFileSync(join(this.dir, POLICY_FILE), 'utf8'));
+  }
+
+  #guard() {
+    const c = this.agreementChange();
+    if (c.accepted === undefined) { this.acceptAgreement(); return; }
+    if (c.changed) {
+      throw new SaidsoError('The agreement (saidso.yml) changed since your person last accepted it. Nothing is sent or done until they read the change and accept it, themselves: saidso agreement');
+    }
   }
 
   /** Bring in what others wrote. Safe to call often. */
@@ -69,6 +94,7 @@ export class Room {
     return readdirSync(dir)
       .filter((f) => f.endsWith('.md'))
       .map((f) => parseMessage(readFileSync(join(dir, f), 'utf8')))
+      .filter((m) => KINDS.has(m.kind) && (m.from === 'saidso' || this.policy.members[m.from]) && this.policy.members[m.to])
       .sort((a, b) => (a.at === b.at ? a.id.localeCompare(b.id) : a.at.localeCompare(b.at)));
   }
 
@@ -82,11 +108,19 @@ export class Room {
   /** @param {Message} m @param {Message[]} [all] @returns {Status} */
   status(m, all = this.all()) {
     if (m.kind !== 'ask') return 'delivered';
-    if (m.verdict === 'blocked') return 'blocked';
-    if (m.verdict === 'deliver') return 'delivered';
-    const d = all.find((x) => x.kind === 'decision' && x.re === m.id);
+    // Never trust what a message file says about itself: judge it again by the current agreement.
+    const now = evaluate(this.policy, m.from, m.to, m.action);
+    if (m.verdict === 'blocked' || now.verdict === 'blocked') return 'blocked';
+    if (now.verdict === 'deliver') return 'delivered';
+    const d = all.find((x) => x.kind === 'decision' && x.re === m.id && x.from !== m.from && now.okFrom.includes(x.from));
     if (!d) return 'waiting-for-ok';
     return d.decision === 'approved' ? 'approved' : 'denied';
+  }
+
+  /** Who may answer this request, by the current agreement. @param {Message} m */
+  okFrom(m) {
+    const now = evaluate(this.policy, m.from, m.to, m.action);
+    return now.verdict === 'needs-ok' ? now.okFrom.filter((x) => x !== m.from) : [];
   }
 
   /**
@@ -96,6 +130,7 @@ export class Room {
    */
   send({ to, body, action, re }) {
     this.pull();
+    this.#guard();
     const from = this.me();
     if (!body?.trim()) throw new SaidsoError('The message is empty.');
     const d = evaluate(this.policy, from, to, action);
@@ -124,11 +159,13 @@ export class Room {
    */
   decide(id, decision, note) {
     this.pull();
+    this.#guard();
     const me = this.me();
     const all = this.all();
     const ask = this.get(id);
-    if (ask.kind !== 'ask' || ask.verdict !== 'needs-ok') throw new SaidsoError('That message does not wait for anyone\'s OK.');
-    if (!ask.ok_from?.includes(me)) throw new SaidsoError(`This waits for ${ask.ok_from?.map((x) => displayName(this.policy, x)).join(' or ')}, not for you.`);
+    const okFrom = this.okFrom(ask);
+    if (ask.kind !== 'ask' || !okFrom.length) throw new SaidsoError('That message does not wait for anyone\'s OK.');
+    if (!okFrom.includes(me)) throw new SaidsoError(`This waits for ${okFrom.map((x) => displayName(this.policy, x)).join(' or ')}, not for you.`);
     const current = this.status(ask, all);
     if (current !== 'waiting-for-ok') throw new SaidsoError(`Already ${current}.`);
     const d = this.#make({
@@ -146,6 +183,7 @@ export class Room {
    */
   check(action, opts = {}) {
     this.pull();
+    this.#guard();
     const me = this.me();
     const a = this.policy.actions[action];
     if (!a) return { ok: false, reason: `"${action}" is not in the agreement.` };
@@ -167,17 +205,19 @@ export class Room {
   /** Record that an approved action was carried out, so one OK is used once. @param {string} id @param {string} what */
   done(id, what) {
     this.pull();
+    this.#guard();
     const me = this.me();
     const ask = this.get(id);
     if (ask.from !== me) throw new SaidsoError('You can only report on your own requests.');
     if (this.status(ask) !== 'approved') throw new SaidsoError('That request is not approved.');
-    const msgs = (ask.ok_from ?? []).map((who) => this.#notice(who, ask, `Done: ${displayName(this.policy, me)}'s agent did what you approved (${ask.action}). ${what}`.trim()));
+    const msgs = this.okFrom(ask).map((who) => this.#notice(who, ask, `Done: ${displayName(this.policy, me)}'s agent did what you approved (${ask.action}). ${what}`.trim()));
     this.#commit(msgs, `${me} done ${ask.id}`);
   }
 
   /** Messages for me that I have not seen. @param {{ all?: boolean, markSeen?: boolean }} [opts] */
   inbox(opts = {}) {
     this.pull();
+    this.#guard();
     const me = this.me();
     const seen = new Set(readSeen(this.dir));
     const mine = this.all().filter((m) => m.to === me && (opts.all || !seen.has(m.id)));
@@ -190,7 +230,7 @@ export class Room {
     this.pull();
     const me = this.me();
     const all = this.all();
-    return all.filter((m) => m.kind === 'ask' && m.ok_from?.includes(me) && this.status(m, all) === 'waiting-for-ok');
+    return all.filter((m) => m.kind === 'ask' && this.okFrom(m).includes(me) && this.status(m, all) === 'waiting-for-ok');
   }
 
   /** @param {string} id */

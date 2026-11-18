@@ -38,7 +38,10 @@ Before you do anything that leaves your own machine for the people in this room 
     const p = r.policy;
     const members = Object.entries(p.members).map(([id, m]) => `- ${id}: ${m.name ?? id}, ${m.role}${id === me ? ' (this is you)' : ''}`);
     const actions = Object.entries(p.actions).map(([id, a]) => `- ${id}: "${a.say}". Started by: ${a.by.join(', ')}.${a.to ? ` Only to: ${a.to.join(', ')}.` : ''}${a.ok ? ` Needs an OK from: ${a.ok}.` : ''}`);
-    return `Room "${p.room}". You act for ${displayName(p, me)} (${p.members[me].role}).\n\nMembers:\n${members.join('\n')}\n\nAgreed actions (anything else is blocked, and both people are told):\n${actions.join('\n')}`;
+    const change = r.agreementChange().changed
+      ? 'WARNING: saidso.yml changed since your person accepted it. Nothing can be sent or done until your person reads the change and runs "saidso accept" themselves. Tell them, in plain words.\n\n'
+      : '';
+    return `${change}Room "${p.room}". You act for ${displayName(p, me)} (${p.members[me].role}).\n\nMembers:\n${members.join('\n')}\n\nAgreed actions (anything else is blocked, and both people are told):\n${actions.join('\n')}`;
   }));
 
   server.registerTool('saidso_send', {

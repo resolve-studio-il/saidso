@@ -46,7 +46,9 @@ saidso is the small layer between agents of different people that fixes those th
 
 4. **Only people approve.** `saidso approve` asks for a typed "yes" at a real terminal. The MCP server has
    no approve tool at all. One OK is good for one time.
-5. **Agents read messages as data.** Every incoming message is wrapped and labelled as coming from someone else's
+5. **No one changes the agreement alone.** When `saidso.yml` changes, every other copy of the room stops sending
+   and acting until its person reads the change (`saidso agreement`) and accepts it (`saidso accept`).
+6. **Agents read messages as data.** Every incoming message is wrapped and labelled as coming from someone else's
    agent, so it cannot pass itself off as an instruction from the agent's own person.
 
 ## Quickstart (2 minutes)
@@ -139,11 +141,16 @@ Honest version, v0.1:
 
 - **It does:** keep one append-only, readable record of who said what to whom; check every message against an
   agreement both sides can see; stop and announce anything outside it; keep approvals out of the agents' tools;
-  label every incoming message as someone else's words.
+  label every incoming message as someone else's words; stop everything when the agreement changes until each
+  person accepts the change.
 - **It does not (yet):** cryptographically prove that a human, not an agent, typed the "yes". An agent with full
   shell access on your machine could fake a terminal. Signed approvals (SSH signatures, which GitHub already
   verifies) are next on the roadmap. Until then saidso keeps honest agents honest and makes dishonest moves
   visible in git history.
+- **Anyone with write access to the room can write files.** saidso never trusts what a file says about itself:
+  every request is judged again by the current agreement, and a decision counts only if it comes from a member the
+  agreement names. But a member can still write a file *claiming* to be someone else; git history shows who really
+  committed it. Signed commits close this, and come with signed approvals.
 - saidso does not run your agent and does not block it from doing things outside the room. Your agent asks
   `saidso_check` before acting, the way it reads `AGENTS.md`. The rule is in its instructions; the record is in git.
 
@@ -168,7 +175,7 @@ Honest version, v0.1:
 
 ```bash
 npm install
-npm test          # 25 tests, real git repos in a temp folder
+npm test          # 29 tests, real git repos in a temp folder
 npm run typecheck
 ```
 

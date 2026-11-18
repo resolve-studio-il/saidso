@@ -30,7 +30,9 @@ export function forAgent(room, m, all) {
     m.kind === 'ask' ? `status: ${status}${m.reason ? ` - ${m.reason}` : ''}` : '',
     m.re ? `in reply to: ${m.re}` : '',
   ].filter(Boolean);
-  return `<saidso-message ${head.join('; ').replace(/"/g, "'")}>\n${m.body}\n</saidso-message>`;
+  // A body must not be able to close the wrapper and speak outside it.
+  const body = m.body.replace(/<(\/?)(saidso-message)/gi, '‹$1$2');
+  return `<saidso-message ${head.join('; ').replace(/"/g, "'")}>\n${body}\n</saidso-message>`;
 }
 
 /** @param {Room} room @param {Message} m @param {Message[]} all */

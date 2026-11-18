@@ -25,6 +25,8 @@ ${bold('For people')}
   saidso approve <id|n> ["note"]                 say yes (n = number from "pending")
   saidso deny <id> ["why"]
   saidso log                                     everything, in order: who said what to whom
+  saidso agreement                               the agreement, and what changed since you accepted it
+  saidso accept                                  accept a changed agreement (asks you to confirm)
   saidso thread <id>
 
 Room folder: --room <dir>, or SAIDSO_ROOM, or the current folder.
@@ -105,6 +107,29 @@ export async function main(argv) {
         if (!id) throw new SaidsoError('Usage: saidso done <id> "what was done"');
         room.done(id, what.join(' '));
         console.log(green('Recorded.'), dim('The person who approved it was told.'));
+        return 0;
+      }
+      case 'agreement': {
+        room.pull();
+        const c = room.agreementChange();
+        if (!c.changed) { console.log(c.current); console.log(dim('This is the agreement your person accepted.')); return 0; }
+        console.log(yellow('The agreement changed since you last accepted it.') + dim(` Last change: ${lastChange(room.dir)}`) + '\n');
+        console.log(lineDiff(c.accepted ?? '', c.current));
+        console.log(`\nUntil you accept it, nothing is sent or done from here. To accept: ${bold('saidso accept')}`);
+        return 0;
+      }
+      case 'accept': {
+        room.pull();
+        const c = room.agreementChange();
+        if (!c.changed) { console.log(dim('Nothing to accept.')); return 0; }
+        if (!process.stdin.isTTY || !process.stdout.isTTY) throw new SaidsoError('"accept" is for people, at a real terminal. Run "saidso agreement" to see the change first.');
+        console.log(lineDiff(c.accepted ?? '', c.current) + '\n');
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        const answer = (await rl.question('Type "yes" to accept the new agreement: ')).trim().toLowerCase();
+        rl.close();
+        if (answer !== 'yes') throw new SaidsoError('Not accepted. Nothing changed.');
+        room.acceptAgreement();
+        console.log(green('Accepted.'));
         return 0;
       }
       case 'log': {
@@ -197,6 +222,21 @@ async function confirmPerson(room, ask, cmd) {
   const answer = (await rl.question(`Type "${word}" to ${cmd}: `)).trim().toLowerCase();
   rl.close();
   if (answer !== word) throw new SaidsoError('Not confirmed. Nothing changed.');
+}
+
+/** A small line diff, enough to read an agreement change. @param {string} a @param {string} b */
+function lineDiff(a, b) {
+  const A = a.split('\n'), B = b.split('\n');
+  const setA = new Set(A), setB = new Set(B);
+  const out = [];
+  for (const l of A) if (!setB.has(l) && l.trim()) out.push(red(`- ${l}`));
+  for (const l of B) if (!setA.has(l) && l.trim()) out.push(green(`+ ${l}`));
+  return out.join('\n') || dim('(only whitespace changed)');
+}
+
+/** @param {string} dir */
+function lastChange(dir) {
+  try { return git(dir, ['log', '-1', '--format=%an, %ar', '--', 'saidso.yml']).trim(); } catch { return 'unknown'; }
 }
 
 /** @param {string} bin */
