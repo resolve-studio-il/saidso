@@ -50,3 +50,9 @@ who is in the room, what the other side's agent may ask, and what will always wa
 - "Their agent can talk to me, but anything outside what we agreed is stopped, and I'm told."
 - "Some things wait for my yes. I give it myself with `saidso approve`. My agent cannot approve for me."
 - "Everything is written down in one place we both can read."
+
+## One room per project
+
+One room repo per project. If you are the professional (developer or studio) starting a room, create the repo on
+the **client's** GitHub account or organisation and get invited as a collaborator, so the record and the assets stay
+the client's. Another project gets its own room.

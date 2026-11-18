@@ -231,6 +231,35 @@ export class Room {
     return mine;
   }
 
+  /**
+   * Notices for me worth a push: something waits for my OK, my agent was stopped (or someone's agent was
+   * stopped with me), or my request was answered. Not marked seen; see markNotified. Each has `notifyKind`.
+   * @returns {(Message & { notifyKind: 'waiting' | 'stopped' | 'decided' })[]}
+   */
+  unnotified() {
+    this.pull();
+    this.#guard();
+    const me = this.me();
+    const sent = new Set(readJson(this.dir, 'notified.json'));
+    const all = this.all();
+    /** @type {(Message & { notifyKind: 'waiting' | 'stopped' | 'decided' })[]} */
+    const out = [];
+    for (const m of all) {
+      if (m.kind !== 'notice' || m.from !== 'saidso' || m.to !== me || sent.has(m.id) || !m.re) continue;
+      const ask = all.find((x) => x.id === m.re);
+      if (!ask || ask.kind !== 'ask' || m.body.startsWith('Done:')) continue;
+      if (ask.verdict === 'blocked') out.push({ ...m, notifyKind: 'stopped' });
+      else if (ask.verdict === 'needs-ok' && m.to === ask.from) out.push({ ...m, notifyKind: 'decided' });
+      else if (ask.verdict === 'needs-ok' && this.status(ask, all) === 'waiting-for-ok') out.push({ ...m, notifyKind: 'waiting' });
+    }
+    return out;
+  }
+
+  /** @param {string[]} ids */
+  markNotified(ids) {
+    writeLocal(this.dir, 'notified.json', JSON.stringify([...new Set([...readJson(this.dir, 'notified.json'), ...ids])]));
+  }
+
   /** Requests that wait for my OK. */
   pending() {
     this.pull();
@@ -343,10 +372,12 @@ function writeLocal(dir, name, text) {
   mkdirSync(join(dir, LOCAL), { recursive: true });
   writeFileSync(join(dir, LOCAL, name), text);
 }
-/** @param {string} dir @returns {string[]} */
-function readSeen(dir) {
-  try { return JSON.parse(readLocal(dir, 'seen.json') ?? '[]'); } catch { return []; }
+/** @param {string} dir @param {string} name @returns {string[]} */
+function readJson(dir, name) {
+  try { return JSON.parse(readLocal(dir, name) ?? '[]'); } catch { return []; }
 }
+/** @param {string} dir */
+function readSeen(dir) { return readJson(dir, 'seen.json'); }
 /** @param {string} dir @param {string[]} ids */
 function writeSeen(dir, ids) {
   writeLocal(dir, 'seen.json', JSON.stringify([...new Set(ids)]));

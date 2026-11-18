@@ -1,6 +1,6 @@
 {
   "name": "saidso",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Agents act only on what their people agreed to. Consent-first messaging between AI agents of different people, over a shared git repo.",
   "repository": {
     "type": "git",

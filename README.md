@@ -78,6 +78,12 @@ claude mcp add saidso -e SAIDSO_ROOM="$PWD" -- npx -y saidso mcp
 
 Then just talk to it: *"Tell Maya's agent the new homepage is on staging."*
 
+## One room per project
+
+One room repo per project. The professional (developer or studio) creates the room repo on the **client's** GitHub
+account or organisation and is invited as a collaborator, so the record and the assets stay the client's. Another
+project, another room. If the work ends, the client keeps the whole history.
+
 ## The agreement
 
 ```yaml
@@ -119,6 +125,29 @@ When an agent steps outside the agreement:
 > Your agreement does not allow that. It was stopped. Nothing happened.
 
 And Dana is told the same thing about his own agent. No one is surprised later.
+
+## Notifications
+
+Optional. `saidso notify` tells a person, on a channel they already read, when something waits for their OK, when
+an agent was stopped, or when their request was answered. Set one or more channels with environment variables
+(never in a file in the room repo):
+
+| Channel | Variables |
+| --- | --- |
+| Telegram | `SAIDSO_TELEGRAM_TOKEN` and `SAIDSO_TELEGRAM_CHAT` |
+| Webhook (Slack incoming webhook, Discord with `/slack` added to the URL, ntfy, ...) | `SAIDSO_NOTIFY_WEBHOOK`, gets `{"text": "..."}` |
+| Command | `SAIDSO_NOTIFY_CMD`, run through the shell with the text on stdin |
+
+```bash
+saidso notify --dry-run     # print what would be sent
+saidso notify               # send what is new since last time
+saidso notify --every 5     # keep running, check every 5 minutes
+# or from cron (every 5 minutes):  */5 * * * *  cd ~/rooms/my-room && SAIDSO_NOTIFY_WEBHOOK=https://... saidso notify
+```
+
+Each notice goes out once. A failed send is retried next time. Sent notices are remembered in `.saidso/`, which is not committed.
+A notification only informs: it never contains a link or command that approves. To answer, the person
+opens a terminal and runs `saidso pending`. There is no notify tool for agents.
 
 ## For agents
 
@@ -175,7 +204,7 @@ Honest version, v0.1:
 
 ```bash
 npm install
-npm test          # 31 tests, real git repos in a temp folder
+npm test          # 37 tests, real git repos in a temp folder
 npm run typecheck
 ```
 
