@@ -180,8 +180,8 @@ npm run typecheck
 ```
 
 Releases: bump `version` in package.json through a PR, then push a tag `vX.Y.Z` on that commit.
-The release workflow publishes to npm with provenance through npm Trusted Publishing, so no npm token
-is stored anywhere.
+The release workflow stages it on npm with provenance through npm Trusted Publishing (no npm token
+is stored anywhere), and a maintainer approves the staged version with 2FA.
 
 MIT licensed. Built in a small studio where a developer, clients and several agents work together
 every day. That is where this came from.
