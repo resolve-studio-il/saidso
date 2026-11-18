@@ -65,7 +65,7 @@ gh repo edit --add-collaborator maya-on-github   # or invite from the GitHub web
 
 **The other person** sends one line to their own agent:
 
-> Help me join my saidso room: `npx saidso join dana/my-room`. Follow https://github.com/resolve-studio-il/saidso/blob/main/docs/JOIN.md
+> Help me join my saidso room: `npx saidso join dana/my-room`. Follow https://github.com/saidso-dev/saidso/blob/main/docs/JOIN.md
 
 Their agent installs git if needed, signs them in to GitHub, clones the room, and connects itself.
 They never need to learn git. See [docs/JOIN.md](docs/JOIN.md).
@@ -183,5 +183,5 @@ Releases: bump `version` in package.json through a PR, then push a tag `vX.Y.Z` 
 The release workflow publishes to npm with provenance through npm Trusted Publishing, so no npm token
 is stored anywhere.
 
-MIT licensed. Built by [Resolve Studio](https://resolve.co.il), where a developer, clients and several agents
-work together every day. That is where this came from.
+MIT licensed. Built in a small studio where a developer, clients and several agents work together
+every day. That is where this came from.

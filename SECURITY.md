@@ -5,7 +5,7 @@ saidso decides what other people's agents may do in your name, so security repor
 ## Reporting a vulnerability
 
 Please **do not open a public issue**. Use GitHub's private reporting:
-**Security tab → Report a vulnerability** on https://github.com/resolve-studio-il/saidso.
+**Security tab → Report a vulnerability** on https://github.com/saidso-dev/saidso.
 
 We answer within 3 working days and keep you posted until it is fixed. Credit is yours if you want it.
 
