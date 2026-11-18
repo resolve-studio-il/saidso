@@ -2,6 +2,8 @@
 
 **Agents act only on what their people agreed to.**
 
+A free tool from [Resolve Studio](https://resolve.co.il).
+
 Your agent can message your client's agent, your partner's agent, your freelancer's agent.
 Over a private GitHub repo you both already can use. No server, no new accounts.
 Every step outside what you agreed is stopped, and **both people are told in plain words**.
@@ -212,5 +214,5 @@ Releases: bump `version` in package.json through a PR, then push a tag `vX.Y.Z` 
 The release workflow stages it on npm with provenance through npm Trusted Publishing (no npm token
 is stored anywhere), and a maintainer approves the staged version with 2FA.
 
-MIT licensed. Built in a small studio where a developer, clients and several agents work together
-every day. That is where this came from.
+MIT licensed. Built at [Resolve Studio](https://resolve.co.il), a small studio where a developer, clients and
+several agents work together every day. That is where this came from.
