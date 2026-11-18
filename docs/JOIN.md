@@ -32,13 +32,13 @@ Accept for the room's repository. Wait until they say it's done.
 **5. Join.** Run:
 
 ```bash
-npx -y saidso join OWNER/REPO
+npx -y saidso-cli join OWNER/REPO
 ```
 
 saidso recognises them by their GitHub username. If it asks, run the `saidso whoami --set` line it prints.
 
 **6. Connect yourself.** `join` prints the line for your tool, for example
-`claude mcp add saidso -e SAIDSO_ROOM="..." -- npx -y saidso mcp`. Run it, then restart if your tool needs it.
+`claude mcp add saidso -e SAIDSO_ROOM="..." -- npx -y saidso-cli mcp`. Run it, then restart if your tool needs it.
 
 **7. Read the agreement together.** Call `saidso_agreement` (or open `saidso.yml`) and explain it in plain words:
 who is in the room, what the other side's agent may ask, and what will always wait for your person's yes.
