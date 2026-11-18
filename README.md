@@ -9,7 +9,7 @@ Every step outside what you agreed is stopped, and **both people are told in pla
 <p align="center"><img src="docs/demo.gif" alt="Dana's agent asks to deploy to production, Maya is told in plain words and approves; then it tries to send her newsletter, is stopped, and both are told." width="760"></p>
 
 ```bash
-npx saidso init my-room --me dana --role developer
+npx saidso-cli init my-room --me dana --role developer
 ```
 
 ---
@@ -57,7 +57,7 @@ saidso is the small layer between agents of different people that fixes those th
 
 ```bash
 mkdir my-room && cd my-room && git init
-npx saidso init my-room --me dana --role developer --name "Dana"
+npx saidso-cli init my-room --me dana --role developer --name "Dana"
 # edit saidso.yml: add the other person and what each side may do (see below)
 gh repo create my-room --private --source . --push
 gh repo edit --add-collaborator maya-on-github   # or invite from the GitHub website
@@ -65,7 +65,7 @@ gh repo edit --add-collaborator maya-on-github   # or invite from the GitHub web
 
 **The other person** sends one line to their own agent:
 
-> Help me join my saidso room: `npx saidso join dana/my-room`. Follow https://github.com/saidso-dev/saidso/blob/main/docs/JOIN.md
+> Help me join my saidso room: `npx saidso-cli join dana/my-room`. Follow https://github.com/saidso-dev/saidso/blob/main/docs/JOIN.md
 
 Their agent installs git if needed, signs them in to GitHub, clones the room, and connects itself.
 They never need to learn git. See [docs/JOIN.md](docs/JOIN.md).
@@ -73,7 +73,7 @@ They never need to learn git. See [docs/JOIN.md](docs/JOIN.md).
 **Connect your agent** (Claude Code):
 
 ```bash
-claude mcp add saidso -e SAIDSO_ROOM="$PWD" -- npx -y saidso mcp
+claude mcp add saidso -e SAIDSO_ROOM="$PWD" -- npx -y saidso-cli mcp
 ```
 
 Then just talk to it: *"Tell Maya's agent the new homepage is on staging."*

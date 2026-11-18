@@ -2,7 +2,7 @@
   "mcpServers": {
     "saidso": {
       "command": "npx",
-      "args": ["-y", "saidso", "mcp"],
+      "args": ["-y", "saidso-cli", "mcp"],
       "env": { "SAIDSO_ROOM": "/Users/you/.saidso/rooms/dana__my-room" }
     }
   }

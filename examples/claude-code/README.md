@@ -3,7 +3,7 @@
 ## 1. Connect the room
 
 ```bash
-claude mcp add saidso -e SAIDSO_ROOM="$HOME/.saidso/rooms/dana__my-room" -- npx -y saidso mcp
+claude mcp add saidso -e SAIDSO_ROOM="$HOME/.saidso/rooms/dana__my-room" -- npx -y saidso-cli mcp
 ```
 
 (`saidso join` prints this line with the right folder.)
@@ -27,7 +27,7 @@ claude mcp add saidso -e SAIDSO_ROOM="$HOME/.saidso/rooms/dana__my-room" -- npx 
 {
   "hooks": {
     "SessionStart": [
-      { "hooks": [{ "type": "command", "command": "npx -y saidso inbox --for-agent --room \"$HOME/.saidso/rooms/dana__my-room\"" }] }
+      { "hooks": [{ "type": "command", "command": "npx -y saidso-cli inbox --for-agent --room \"$HOME/.saidso/rooms/dana__my-room\"" }] }
     ]
   }
 }
