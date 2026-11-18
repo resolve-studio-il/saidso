@@ -6,6 +6,7 @@
     "type": "git",
     "url": "git+https://github.com/saidso-dev/saidso.git"
   },
+  "author": "Resolve Studio (https://resolve.co.il)",
   "homepage": "https://github.com/saidso-dev/saidso#readme",
   "bugs": {
     "url": "https://github.com/saidso-dev/saidso/issues"
